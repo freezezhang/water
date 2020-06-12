@@ -93,6 +93,7 @@ string FileIO::OpenTypeToCString(OpenType open_type) {
     default:
       return "";
   }
+
 }
 
 } // namespace Water
