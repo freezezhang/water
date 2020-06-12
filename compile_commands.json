@@ -1,0 +1,56 @@
+[
+    {
+        "arguments": [
+            "g++", 
+            "-c", 
+            "-O0", 
+            "-g3", 
+            "-Wall", 
+            "-fmessage-length=0", 
+            "-I.", 
+            "-MFbin/Debug/./file_system/file_status.d", 
+            "-MTbin/Debug/./file_system/file_status.d", 
+            "-obin/Debug/./file_system/file_status.o", 
+            "-fPIC", 
+            "file_system/file_status.cc"
+        ], 
+        "directory": "/data/freeze/water", 
+        "file": "file_system/file_status.cc"
+    }, 
+    {
+        "arguments": [
+            "g++", 
+            "-c", 
+            "-O0", 
+            "-g3", 
+            "-Wall", 
+            "-fmessage-length=0", 
+            "-I.", 
+            "-MFbin/Debug/./file_system/directory.d", 
+            "-MTbin/Debug/./file_system/directory.d", 
+            "-obin/Debug/./file_system/directory.o", 
+            "-fPIC", 
+            "file_system/directory.cc"
+        ], 
+        "directory": "/data/freeze/water", 
+        "file": "file_system/directory.cc"
+    }, 
+    {
+        "arguments": [
+            "g++", 
+            "-c", 
+            "-O0", 
+            "-g3", 
+            "-Wall", 
+            "-fmessage-length=0", 
+            "-I.", 
+            "-MFbin/Debug/./file_io/file_io.d", 
+            "-MTbin/Debug/./file_io/file_io.d", 
+            "-obin/Debug/./file_io/file_io.o", 
+            "-fPIC", 
+            "file_io/file_io.cc"
+        ], 
+        "directory": "/data/freeze/water", 
+        "file": "file_io/file_io.cc"
+    }
+]
