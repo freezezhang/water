@@ -4,16 +4,11 @@
 #include <unistd.h>
 
 #include "net/handler.h"
+#include "net/net_error.h"
 
 namespace Water {
 
-EPoll::EPoll() throw (BadEPoll)
-    : return_event_list_(kDefaultEventListSize),
-      is_run_(false) {
-  epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
-  if (epoll_fd_ < 0) {
-    throw BadEPoll("create_epoll() error!");
-  }
+EPoll::EPoll() : return_event_list_(kDefaultEventListSize), is_run_(false) {
 }
 
 EPoll::~EPoll() {
@@ -24,26 +19,35 @@ EPoll::~EPoll() {
   close(epoll_fd_);
 }
 
-int EPoll::RegisterHandler(Handler* handler,
+Int32 EPoll::Init() {
+  epoll_fd_ = epoll_create1(EPOLL_CLOEXEC);
+  if (epoll_fd_ <= 0) {
+    return  kNetErrorEpollCreate;
+  }
+  return 0;
+}
+
+Int32 EPoll::RegisterHandler(Handler* handler,
                            const EventSet& event_set,
-                           int priority) {
+                           Int32 priority) {
   assert(handler);
   handler->SetPriority(priority);
-  int fd = handler->fd();
+  Int32 fd = handler->fd();
   assert(fd >= 0);
   handler->set_concern_event_set(event_set);
   if (register_map_.find(fd) == register_map_.end()) {
-    int result = EPollControl(EPOLL_CTL_ADD, handler);
-    if (result == 0) register_map_.insert(std::make_pair(fd, handler));
-    return result;
+    Int32 ret = EPollControl(EPOLL_CTL_ADD, handler);
+    if (ret == 0) 
+      register_map_.insert(std::make_pair(fd, handler));
+    return ret;
   } else {
     return EPollControl(EPOLL_CTL_MOD, handler);
   }
 }
 
-int EPoll::RemoveHandler(Handler* handler) {
+Int32 EPoll::RemoveHandler(Handler* handler) {
   assert(handler);
-  int fd = handler->fd();
+  Int32 fd = handler->fd();
   assert(fd >= 0);
   assert(register_map_.find(fd) != register_map_.end());
   register_map_.erase(fd);
@@ -51,26 +55,25 @@ int EPoll::RemoveHandler(Handler* handler) {
   return EPollControl(EPOLL_CTL_DEL, handler);
 }
 
-TimerID EPoll::ScheduleTimer(Handler* handler,
-                             const TimeValue& delay,
-                             const TimeValue& repeat) {
+TimerType EPoll::ScheduleTimer(Handler *handler, const TimeValue &delay,
+                               const TimeValue &repeat) {
   assert(handler);
   assert(delay >= TimeValue::zero);
   assert(repeat >= TimeValue::zero);
   handler->AddConcernEvent(kEventTimeout);
-  TimerEvent* timer_event = new (std::nothrow) TimerEvent(handler,
-                                                          TimeValue::Now() + delay,
-                                                          repeat);
-  assert(timer_event);
-  return timer_queue_.Push(timer_event);
+  TimerEvent *timer_event =
+      new (std::nothrow) TimerEvent(handler, TimeValue::Now() + delay, repeat);
+  if (timer_event != nullptr)
+    return timer_queue_.Push(timer_event);
+  return 0;
 }
 
-int EPoll::CancelTimer(Handler* handler) {
+Int32 EPoll::CancelTimer(Handler* handler) {
   assert(handler);
   return timer_queue_.Remove(handler);
 }
 
-int EPoll::CancelTimer(TimerID timer_id) {
+Int32 EPoll::CancelTimer(TimerType timer_id) {
   assert(timer_id > 0);
   return timer_queue_.Remove(timer_id);
 }
@@ -87,9 +90,9 @@ void EPoll::ResumeHandler(Handler* handler) {
   handler->Resume();
 }
 
-u_int32 EPoll::EventSetToEPollEvents(const EventSet& event_set) const {
-  u_int32 events = event_set.GetEventSet();
-  u_int32 epoll_events = 0;
+Uint32 EPoll::EventSetToEPollEvents(const EventSet& event_set) const {
+  Uint32 events = event_set.GetEventSet();
+  Uint32 epoll_events = 0;
   //epoll_events |= EPOLLET;
   if (events & kEventInput) epoll_events |= EPOLLIN;
   if (events & kEventOutput) epoll_events |= EPOLLOUT;
@@ -97,7 +100,7 @@ u_int32 EPoll::EventSetToEPollEvents(const EventSet& event_set) const {
   return epoll_events;
 }
 
-EventSet EPoll::EPollEventsToEventSet(u_int32 epoll_events) const {
+EventSet EPoll::EPollEventsToEventSet(Uint32 epoll_events) const {
   EventSet event_set;
   if (epoll_events & EPOLLIN) event_set.AddEvent(kEventInput);
   if (epoll_events & EPOLLOUT) event_set.AddEvent(kEventOutput);
@@ -105,22 +108,22 @@ EventSet EPoll::EPollEventsToEventSet(u_int32 epoll_events) const {
   return event_set;
 }
 
-int EPoll::HandleEvents(const TimeValue& timeout, TimeValue& expiration) {
-  int timeout_ms = -1;
+Int32 EPoll::HandleEvents(const TimeValue& timeout, TimeValue& expiration) {
+  Int32 timeout_ms = -1;
   if (timeout != TimeValue::null) {
-    timeout_ms = static_cast<int>(timeout.Millisecond());
+    timeout_ms = static_cast<Int32>(timeout.Millisecond());
     if (timeout_ms <= 0) timeout_ms = 0;
     time_t max_timeout = kEventMaxTimeout.Millisecond();
     if (timeout_ms > max_timeout) timeout_ms = max_timeout;
   }
 
-  int actived_number = epoll_wait(epoll_fd_,
+  Int32 actived_number = epoll_wait(epoll_fd_,
                                   &return_event_list_[0],
-                                  static_cast<int>(return_event_list_.size()),
+                                  static_cast<Int32>(return_event_list_.size()),
                                   timeout_ms);
   expiration = TimeValue::Now();
 
-  for (int i = 0; i < actived_number; ++i) {
+  for (Int32 i = 0; i < actived_number; ++i) {
     Handler* handler = static_cast<Handler*>(return_event_list_[i].data.ptr);
     assert(handler);
     assert(register_map_.find(handler->fd()) != register_map_.end());
@@ -130,7 +133,7 @@ int EPoll::HandleEvents(const TimeValue& timeout, TimeValue& expiration) {
     activated_list_.push_back(handler);
   }
 
-  int list_size = return_event_list_.size();
+  Int32 list_size = return_event_list_.size();
   if (actived_number == list_size) {
     return_event_list_.resize(list_size * 2);
   }
@@ -138,7 +141,7 @@ int EPoll::HandleEvents(const TimeValue& timeout, TimeValue& expiration) {
   return actived_number;
 }
 
-int EPoll::EventLoop() {
+Int32 EPoll::EventLoop() {
   while (is_run_) {
     TimeValue timeout = TimeValue::null;
     if (!timer_queue_.Empty()) {
@@ -157,17 +160,17 @@ int EPoll::EventLoop() {
   return 0;
 }
 
-int EPoll::StartEventLoop() {
+Int32 EPoll::StartEventLoop() {
   is_run_ = true;
   return EventLoop();
 }
 
-int EPoll::EndEventLoop() {
+Int32 EPoll::EndEventLoop() {
   is_run_ = false;
   return 0;
 }
 
-int EPoll::EPollControl(int operation, Handler* handler) const {
+Int32 EPoll::EPollControl(int operation, Handler* handler) const {
   assert(operation == EPOLL_CTL_ADD || operation == EPOLL_CTL_MOD || operation == EPOLL_CTL_DEL);
   assert(handler);
   struct epoll_event event;
@@ -177,8 +180,8 @@ int EPoll::EPollControl(int operation, Handler* handler) const {
   return epoll_ctl(epoll_fd_, operation, handler->fd(), &event);
 }
 
-int EPoll::CleanPastTimeoutEvents(const TimeValue& expiration) {
-  int pop_number = 0;
+Int32 EPoll::CleanPastTimeoutEvents(const TimeValue& expiration) {
+  Int32 pop_number = 0;
   while (!timer_queue_.Empty()) {
     TimerEvent* top = timer_queue_.Top();
     assert(top);
@@ -187,10 +190,8 @@ int EPoll::CleanPastTimeoutEvents(const TimeValue& expiration) {
 
     if (top->GetActivedTime() < expiration) {
       if (top->GetRepeat() != TimeValue::zero) {
-        TimerEvent* repeat_timer =
-            new (std::nothrow) TimerEvent(handler,
-                                          expiration + top->GetRepeat(),
-                                          top->GetRepeat());
+        TimerEvent *repeat_timer = new (std::nothrow) TimerEvent(
+            handler, expiration + top->GetRepeat(), top->GetRepeat());
         assert(repeat_timer);
         timer_queue_.Push(repeat_timer);
       }
@@ -206,12 +207,12 @@ int EPoll::CleanPastTimeoutEvents(const TimeValue& expiration) {
   return pop_number;
 }
 
-int EPoll::IssueEventHandle() {
+Int32 EPoll::IssueEventHandle() {
   for (HandlerList::iterator iter = activated_list_.begin();
       iter != activated_list_.end(); ++iter) {
     Handler* handler = *iter;
     assert(handler);
-    int fd = handler->fd();
+    Int32 fd = handler->fd();
     assert(fd >= 0);
     if (handler->GetPauseState()) continue;
     const EventSet& event_set = handler->actived_event_set();

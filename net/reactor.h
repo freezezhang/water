@@ -2,7 +2,7 @@
  * reactor.h
  *
  * Created on: 2011-5-23
- * Author: freezezdj
+ * Author: freezezhang
  */
 
 #ifndef NET_REACTOR_H_
@@ -21,36 +21,78 @@ class EventSet;
 
 // Bridge 模式实现，可以由 epoll，select，poll，dev/poll 实现 ReactorImplement
 class Reactor {
-public:
-  Reactor(ReactorImplement* implement);
+ public:
+  Reactor(ReactorImplement *implement);
   virtual ~Reactor();
 
-public:
-  inline int RegisterHandler(Handler* handler,
-                             const EventSet& event_set,
+ public:
+  inline int RegisterHandler(Handler *handler, const EventSet &event_set,
                              int priority = kNormalPriority);
 
-  inline int RemoveHandler(Handler* handler);
+  inline int RemoveHandler(Handler *handler);
 
-  inline TimerID ScheduleTimer(Handler* handler,
-                               const TimeValue& delay,
-                               const TimeValue& repeat = TimeValue::zero);
+  inline TimerType ScheduleTimer(Handler *handler, const TimeValue &delay,
+                                 const TimeValue &repeat = TimeValue::zero);
 
-  inline int CancelTimer(Handler* handler);
+  inline int CancelTimer(Handler *handler);
 
-  inline void SuspendHandler(Handler* handler);
-  inline void ResumeHandler(Handler* handler);
+  inline void SuspendHandler(Handler *handler);
+  inline void ResumeHandler(Handler *handler);
 
   inline int StartEventLoop();
   inline int EndEventLoop();
 
-private:
-  ReactorImplement* implement_;
-
+ private:
+  ReactorImplement *implement_;
 };
 
-} // namespace Water
+inline Reactor::Reactor(ReactorImplement *implement) : implement_(implement) {
+  assert(implement);
+}
 
-#include "reactor-inl.h"
+inline Reactor::~Reactor() {
+}
+
+inline int Reactor::RegisterHandler(Handler *handler, const EventSet &event_set,
+                                    int priority) {
+  assert(handler);
+  return implement_->RegisterHandler(handler, event_set, priority);
+}
+
+inline int Reactor::RemoveHandler(Handler *handler) {
+  assert(handler);
+  return implement_->RemoveHandler(handler);
+}
+
+inline TimerType Reactor::ScheduleTimer(Handler *handler, const TimeValue &delay,
+                                        const TimeValue &repeat) {
+  assert(handler);
+  return implement_->ScheduleTimer(handler, delay, repeat);
+}
+
+inline int Reactor::CancelTimer(Handler *handler) {
+  assert(handler);
+  return implement_->CancelTimer(handler);
+}
+
+inline void Reactor::SuspendHandler(Handler *handler) {
+  assert(handler);
+  implement_->SuspendHandler(handler);
+}
+
+inline void Reactor::ResumeHandler(Handler *handler) {
+  assert(handler);
+  implement_->ResumeHandler(handler);
+}
+
+inline int Reactor::StartEventLoop() { 
+  return implement_->StartEventLoop(); 
+}
+
+inline int Reactor::EndEventLoop() {
+  return implement_->EndEventLoop(); 
+}
+
+} // namespace Water
 
 #endif // NET_REACTOR_H_

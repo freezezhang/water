@@ -2,7 +2,7 @@
  * epoll.h
  *
  * Created on: 2011-5-25
- * Author: freezezdj
+ * Author: freezezhang
  */
 
 #ifndef NET_EPOLL_H_
@@ -17,7 +17,6 @@ using std::vector;
 using std::tr1::unordered_map;
 
 #include "net/net_types.h"
-#include "net/net_exception.h"
 #include "net/reactor_implement.h"
 #include "time/time_value.h"
 #include "net/timer_queue.h"
@@ -30,57 +29,57 @@ class TimeValue;
 
 class EPoll : public ReactorImplement {
  public:
-	EPoll() throw(BadEPoll);
-	virtual ~EPoll();
+  EPoll();
+  virtual ~EPoll();
 
  public:
-	virtual int RegisterHandler(Handler* handler,
-	                            const EventSet& event_set,
-	                            int priority = kNormalPriority);
+  virtual Int32 Init();
 
-	virtual int RemoveHandler(Handler* handler);
+  virtual Int32 RegisterHandler(Handler *handler, const EventSet &event_set,
+                                 Int32 priority = kNormalPriority);
 
-	virtual TimerID ScheduleTimer(Handler* handler,
-	                         const TimeValue& delay,
-	                         const TimeValue& repeat = TimeValue::zero);
+  virtual Int32 RemoveHandler(Handler *handler);
 
-	virtual int CancelTimer(Handler* handler);
-	virtual int CancelTimer(TimerID timer_id);
+  virtual TimerType ScheduleTimer(Handler *handler, const TimeValue &delay,
+                                   const TimeValue &repeat = TimeValue::zero);
 
-	virtual void SuspendHandler(Handler* handler);
-	virtual void ResumeHandler(Handler* handler);
+  virtual Int32 CancelTimer(Handler *handler);
+  virtual Int32 CancelTimer(TimerType timer_id);
 
-	virtual int StartEventLoop();
-	virtual int EndEventLoop();
+  virtual void SuspendHandler(Handler *handler);
+  virtual void ResumeHandler(Handler *handler);
 
- private:
-	int HandleEvents(const TimeValue& timeout, TimeValue& expiration);
-	int EventLoop();
-
-	u_int32 EventSetToEPollEvents(const EventSet& event_set) const;
-	EventSet EPollEventsToEventSet(u_int32 epoll_events) const;
-
-	int EPollControl(int operation, Handler* handler) const;
-
-	int CleanPastTimeoutEvents(const TimeValue& expiration);
-
-	int IssueEventHandle();
+  virtual Int32 StartEventLoop();
+  virtual Int32 EndEventLoop();
 
  private:
-	typedef unordered_map<int, Handler*> HandlerMap;
-	typedef vector<Handler*> HandlerList;
-	typedef vector<epoll_event> EventList;
+  Int32 HandleEvents(const TimeValue& timeout, TimeValue& expiration);
+  Int32 EventLoop();
+  
+  Uint32 EventSetToEPollEvents(const EventSet& event_set) const;
+  EventSet EPollEventsToEventSet(Uint32 epoll_events) const;
+  
+  Int32 EPollControl(int operation, Handler* handler) const;
+  
+  Int32 CleanPastTimeoutEvents(const TimeValue& expiration);
+  
+  Int32 IssueEventHandle();
 
  private:
-	int epoll_fd_;
+  typedef unordered_map<Int32, Handler *> HandlerMap;
+  typedef vector<Handler *> HandlerList;
+  typedef vector<epoll_event> EventList;
 
-	HandlerMap register_map_;
-	HandlerList activated_list_;
-	EventList return_event_list_;
+ private:
+  Int32 epoll_fd_;
 
-	TimerQueue timer_queue_;
+  HandlerMap register_map_;
+  HandlerList activated_list_;
+  EventList return_event_list_;
 
-	bool is_run_;
+  TimerQueue timer_queue_;
+
+  bool is_run_;
 };
 
 } // namespace Water
